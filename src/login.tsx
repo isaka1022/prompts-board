@@ -19,6 +19,7 @@ function LoginComponent() {
   const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [isGeneratingUrl, setIsGeneratingUrl] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isProcessingToken, setIsProcessingToken] = useState(false);
 
   // If already authenticated, show user profile
   if (isAuthenticated && user) {
@@ -124,6 +125,76 @@ You are successfully authenticated and can now use all PromptBoard features.
       
       await authError.showToast();
       setError(authError.userMessage);
+    }
+  };
+
+  // Handle token pasting from clipboard
+  const handlePasteToken = async () => {
+    setIsProcessingToken(true);
+    setError(null);
+
+    try {
+      // Get token from clipboard
+      const clipboardText = await navigator.clipboard.readText();
+      
+      if (!clipboardText) {
+        throw new Error("No text found in clipboard");
+      }
+
+      // Parse the token data
+      let tokenData;
+      try {
+        tokenData = JSON.parse(clipboardText);
+      } catch {
+        throw new Error("Invalid token format. Please copy the complete token from the login page.");
+      }
+
+      // Validate token structure
+      if (!tokenData.access_token || !tokenData.user) {
+        throw new Error("Invalid token data. Please copy the complete token from the login page.");
+      }
+
+      // Store the session data
+      const session = {
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_at: tokenData.expires_at,
+        user: {
+          id: tokenData.user.id,
+          email: tokenData.user.email,
+          user_metadata: {
+            full_name: tokenData.user.name,
+            avatar_url: tokenData.user.avatar_url
+          }
+        }
+      };
+
+      // Import the auth functions
+      const { storeSession } = await import("../lib/auth");
+      await storeSession(session as any);
+
+      await showToast({
+        style: Toast.Style.Success,
+        title: "Login Successful",
+        message: `Welcome back, ${tokenData.user.name}!`,
+      });
+
+      // The useAuth hook will automatically detect the stored session
+      // and update the component state
+    } catch (error) {
+      const authError = new AuthError({
+        type: AuthErrorType.OAUTH_FAILED,
+        message: error instanceof Error ? error.message : "Failed to process token",
+        userMessage: error instanceof Error ? error.message : "Failed to process authentication token",
+        retryable: true,
+        requiresReauth: false,
+        originalError: error instanceof Error ? error : undefined,
+      });
+      
+      await authError.showToast();
+      setError(authError.userMessage);
+    } finally {
+      setIsProcessingToken(false);
     }
   };
 

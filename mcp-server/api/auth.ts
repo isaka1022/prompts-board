@@ -24,6 +24,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return handleLogout(req, res);
       case "user":
         return handleGetUser(req, res);
+      case "success":
+        return handleAuthSuccess(req, res);
+      case "raycast-callback":
+        return handleRaycastCallback(req, res);
       default:
         return res.status(404).json({ error: "Auth endpoint not found" });
     }
@@ -42,13 +46,19 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { redirectTo } = req.query;
+    const { platform } = req.query;
+    const isRaycast = platform === 'raycast';
+    
+    // Choose redirect URL based on platform
+    const redirectTo = isRaycast 
+      ? `${process.env.VERCEL_URL || 'https://mcp-server-4mrd922n0-isaka1022s-projects.vercel.app'}/auth/raycast-callback`
+      : `${process.env.VERCEL_URL || 'https://mcp-server-4mrd922n0-isaka1022s-projects.vercel.app'}/auth/success`;
     
     // Generate Google OAuth URL
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: redirectTo as string || `${process.env.VERCEL_URL || 'http://localhost:3000'}/api/auth/callback`,
+        redirectTo,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
@@ -70,6 +80,270 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
       error: "Failed to generate login URL",
       message: error instanceof Error ? error.message : "Unknown error",
     });
+  }
+}
+
+async function handleAuthSuccess(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    const { code, error: authError } = req.query;
+
+    if (authError) {
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentication Error - PromptBoard</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .error { color: #d73a49; background: #ffeef0; padding: 20px; border-radius: 8px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Authentication Error</h1>
+            <div class="error">
+              <p><strong>Error:</strong> ${authError}</p>
+              <p>Please try logging in again.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    if (!code) {
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentication Error - PromptBoard</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .error { color: #d73a49; background: #ffeef0; padding: 20px; border-radius: 8px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Authentication Error</h1>
+            <div class="error">
+              <p>Missing authorization code. Please try logging in again.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    // Exchange code for session
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code as string);
+
+    if (error || !data.session) {
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentication Error - PromptBoard</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .error { color: #d73a49; background: #ffeef0; padding: 20px; border-radius: 8px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Authentication Error</h1>
+            <div class="error">
+              <p><strong>Error:</strong> ${error?.message || 'Failed to create session'}</p>
+              <p>Please try logging in again.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    const { session, user } = data;
+
+    // Create or update user profile
+    if (supabaseAdmin) {
+      const { error: profileError } = await supabaseAdmin
+        .from("user_profiles")
+        .upsert({
+          id: user.id,
+          display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown User',
+          avatar_url: user.user_metadata?.avatar_url,
+          updated_at: new Date().toISOString()
+        });
+
+      if (profileError) {
+        console.error("Failed to create/update user profile:", profileError);
+      }
+    }
+
+    // Return success page with session data
+    return res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Login Successful - PromptBoard</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 40px; 
+            background: #f6f8fa;
+          }
+          .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          }
+          .success { 
+            color: #28a745; 
+            background: #d4edda; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-bottom: 20px;
+          }
+          .token-container {
+            background: #f8f9fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+          }
+          .token {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            background: white;
+            padding: 15px;
+            border: 1px solid #d1d5da;
+            border-radius: 6px;
+            margin: 10px 0;
+          }
+          .copy-btn {
+            background: #0366d6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+          }
+          .copy-btn:hover {
+            background: #0256cc;
+          }
+          .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+          }
+          .user-info {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>🎉 Login Successful!</h1>
+          
+          <div class="success">
+            <p><strong>Welcome to PromptBoard!</strong> You have successfully authenticated.</p>
+          </div>
+
+          <div class="user-info">
+            <p><strong>Logged in as:</strong> ${user.user_metadata?.full_name || user.email}</p>
+            <p><strong>Email:</strong> ${user.email}</p>
+          </div>
+
+          <div class="instructions">
+            <h3>📋 Next Steps:</h3>
+            <ol>
+              <li>Copy the authentication token below</li>
+              <li>Return to Raycast</li>
+              <li>Use the "Paste Token" action in the login command</li>
+              <li>Start using PromptBoard!</li>
+            </ol>
+          </div>
+
+          <div class="token-container">
+            <h3>🔑 Your Authentication Token:</h3>
+            <div class="token" id="token">${JSON.stringify({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+              expires_at: session.expires_at,
+              user: {
+                id: user.id,
+                email: user.email,
+                name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown User',
+                avatar_url: user.user_metadata?.avatar_url
+              }
+            })}</div>
+            <button class="copy-btn" onclick="copyToken()">📋 Copy Token</button>
+          </div>
+
+          <p><small>⚠️ Keep this token secure and don't share it with anyone. You can close this page after copying the token.</small></p>
+        </div>
+
+        <script>
+          function copyToken() {
+            const token = document.getElementById('token').textContent;
+            navigator.clipboard.writeText(token).then(() => {
+              const btn = document.querySelector('.copy-btn');
+              const originalText = btn.textContent;
+              btn.textContent = '✅ Copied!';
+              btn.style.background = '#28a745';
+              setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '#0366d6';
+              }, 2000);
+            }).catch(err => {
+              alert('Failed to copy token. Please select and copy manually.');
+            });
+          }
+        </script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error("Auth success error:", error);
+    return res.status(500).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Authentication Error - PromptBoard</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; }
+          .container { max-width: 600px; margin: 0 auto; }
+          .error { color: #d73a49; background: #ffeef0; padding: 20px; border-radius: 8px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Authentication Error</h1>
+          <div class="error">
+            <p><strong>Error:</strong> ${error instanceof Error ? error.message : 'Unknown error'}</p>
+            <p>Please try logging in again.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
   }
 }
 
