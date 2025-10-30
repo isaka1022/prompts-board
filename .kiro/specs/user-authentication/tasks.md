@@ -1,0 +1,89 @@
+# Implementation Plan - User Authentication
+
+- [x] 1. Set up Supabase Auth configuration and database schema
+  - [x] 1.1 Configure Google OAuth provider in Supabase dashboard
+    - Enable Google OAuth provider in Supabase Auth settings
+    - Set up redirect URLs for development and production environments
+    - Configure Google OAuth credentials in Supabase
+    - _Requirements: 1.1, 1.2_
+  - [x] 1.2 Update database schema for authentication
+    - Create user_profiles table with team associations
+    - Create teams table for team-based access control
+    - Add user_id and team_id columns to existing prompts table
+    - Add user_id column to existing history table
+    - Update Row Level Security policies for authenticated access
+    - _Requirements: 2.1, 2.4, 3.1, 3.2, 3.3, 3.4_
+
+- [x] 2. Create Supabase client with authentication support
+  - [x] 2.1 Update Supabase client configuration
+    - Modify mcp-server/lib/supabase.ts to support authentication
+    - Add environment variables for Supabase Auth configuration
+    - Create authenticated client instance for server-side operations
+    - _Requirements: 1.3, 5.3_
+  - [x] 2.2 Create Raycast-side Supabase client
+    - Create src/lib/supabase.ts for client-side authentication
+    - Configure client for Raycast environment with proper settings
+    - Implement session persistence using Raycast LocalStorage
+    - _Requirements: 1.4, 5.1, 5.2_
+
+- [x] 3. Implement authentication utilities and state management
+  - [x] 3.1 Build authentication utilities
+    - Create src/lib/auth.ts with session management functions
+    - Implement getStoredSession, storeSession, clearSession functions
+    - Add session validation and authentication status checking
+    - _Requirements: 1.4, 4.2, 5.1, 5.2_
+  - [x] 3.2 Create authentication hook for Raycast
+    - Implement src/hooks/useAuth.ts with login, logout, and user state
+    - Add loading states and error handling for auth operations
+    - Integrate with Raycast preferences for session persistence
+    - _Requirements: 1.5, 4.2, 5.1_
+
+- [x] 4. Implement MCP server authentication endpoints
+  - [x] 4.1 Create authentication API routes
+    - Create mcp-server/api/auth.ts with OAuth endpoints
+    - Build login endpoint that generates Google OAuth URL
+    - Implement callback handler for OAuth code exchange
+    - Add logout endpoint for session invalidation
+    - Add user profile endpoint for authenticated user data
+    - _Requirements: 1.1, 1.2, 1.3, 4.1_
+  - [x] 4.2 Build authentication middleware
+    - Create mcp-server/lib/auth-middleware.ts for JWT validation
+    - Implement middleware to validate Supabase JWT tokens
+    - Add user context attachment to requests
+    - Implement token refresh handling for expired sessions
+    - _Requirements: 5.3, 5.4_
+  - [x] 4.3 Update existing API endpoints with authentication
+    - Modify mcp-server/api/prompts.ts to use authenticated user context
+    - Update mcp-server/api/run.ts to associate history with current user
+    - Implement team-based filtering for prompt retrieval
+    - Add user_id association for new prompts and history entries
+    - _Requirements: 2.1, 2.4, 3.2_
+
+- [-] 5. Create login interface and update Raycast commands
+  - [x] 5.1 Build login command component
+    - Create src/login.tsx with Google OAuth authentication flow
+    - Implement OAuth URL generation and callback processing
+    - Add loading states and error messaging for auth failures
+    - Update package.json to include login command
+    - _Requirements: 1.1, 1.2, 1.5_
+  - [-] 5.2 Update existing commands with authentication
+    - Modify src/add-prompt.tsx to check authentication status and use user context
+    - Update src/search-prompt.tsx to show user-specific prompts and handle auth
+    - Add authentication checks to src/run-prompt.tsx
+    - Implement authentication guards and automatic login redirects
+    - _Requirements: 2.1, 3.2, 4.3, 5.2, 5.3, 5.4_
+
+- [ ] 6. Add user profile and logout functionality
+  - [ ] 6.1 Create user profile display and logout
+    - Build user profile component showing name and team information
+    - Add user avatar and basic profile information display
+    - Implement logout functionality with session cleanup
+    - Add logout action to user interface components
+    - _Requirements: 1.5, 2.3, 4.1, 4.2, 4.4_
+
+- [ ] 7. Add comprehensive error handling and validation
+  - Create error boundary components for authentication failures
+  - Implement retry logic for network issues during auth
+  - Add user-friendly error messages for OAuth failures
+  - Build validation for authentication state transitions
+  - _Requirements: 4.3, 5.4_

@@ -13,6 +13,8 @@ type ExtensionPreferences = {}
 declare type Preferences = ExtensionPreferences
 
 declare namespace Preferences {
+  /** Preferences accessible in the `login` command */
+  export type Login = ExtensionPreferences & {}
   /** Preferences accessible in the `add-prompt` command */
   export type AddPrompt = ExtensionPreferences & {}
   /** Preferences accessible in the `search-prompt` command */
@@ -20,6 +22,8 @@ declare namespace Preferences {
 }
 
 declare namespace Arguments {
+  /** Arguments passed to the `login` command */
+  export type Login = {}
   /** Arguments passed to the `add-prompt` command */
   export type AddPrompt = {}
   /** Arguments passed to the `search-prompt` command */

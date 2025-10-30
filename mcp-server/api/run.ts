@@ -1,8 +1,9 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
-import { supabase } from "../lib/supabase";
-import { generateCompletion } from "../lib/claude";
+import { supabase, createAuthenticatedClient } from "../lib/supabase";
+import { generateCompletion } from "../lib/claude-http";
+import { AuthenticatedRequest, authMiddleware } from "../lib/auth-middleware";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Enable CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -16,6 +17,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // Apply authentication middleware
+  const authResult = await authMiddleware(req, res, { required: true });
+  if (!authResult.success) {
+    return; // Response already sent by middleware
+  }
+
+  const userId = req.userId!;
+  const authHeader = req.headers.authorization!;
+  const token = authHeader.substring(7);
+  const authenticatedClient = createAuthenticatedClient(token);
+
   try {
     const { prompt_id, input } = req.body;
 
@@ -25,8 +37,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Fetch the prompt from Supabase
-    const { data: prompt, error: promptError } = await supabase
+    // Fetch the prompt from Supabase using authenticated client
+    // This will respect RLS policies and only return prompts the user can access
+    const { data: prompt, error: promptError } = await authenticatedClient
       .from("prompts")
       .select("*")
       .eq("id", prompt_id)
@@ -34,20 +47,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (promptError || !prompt) {
       return res.status(404).json({
-        error: "Prompt not found",
+        error: "Prompt not found or access denied",
       });
     }
 
     // Generate completion using Claude
     const output = await generateCompletion(prompt.body, input);
 
-    // Save to history (optional)
+    // Save to history with user association
     try {
-      await supabase.from("history").insert([
+      await authenticatedClient.from("history").insert([
         {
           prompt_id,
           input,
           output,
+          user_id: userId,
           executed_at: new Date().toISOString(),
         },
       ]);

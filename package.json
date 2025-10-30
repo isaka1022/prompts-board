@@ -12,6 +12,12 @@
   "license": "MIT",
   "commands": [
     {
+      "name": "login",
+      "title": "Login",
+      "description": "Login to PromptBoard with Google OAuth",
+      "mode": "view"
+    },
+    {
       "name": "add-prompt",
       "title": "Add Prompt",
       "description": "Add a new prompt to PromptBoard",

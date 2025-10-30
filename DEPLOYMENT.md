@@ -21,7 +21,7 @@ Your PromptBoard MCP server has been successfully deployed to Vercel with Claude
 - ✅ `ANTHROPIC_API_KEY` - Claude API integration ready
 
 **LLM Model:**
-- Using **Claude 3.5 Sonnet** (claude-3-5-sonnet-20241022)
+- Using **Claude 3.5 Sonnet** (claude-haiku-4-5)
 - Max tokens: 4096
 - Temperature: 0.7
 
