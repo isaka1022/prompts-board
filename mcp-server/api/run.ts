@@ -43,10 +43,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Increment call_count for the prompt
     try {
-      await supabase
+      const { error: incrementError } = await supabase
         .from("prompts")
         .update({ call_count: (prompt.call_count || 0) + 1 })
         .eq("id", prompt_id);
+
+      if (incrementError) {
+        console.error("Failed to increment call_count:", incrementError);
+      } else {
+        console.log(`Successfully incremented call_count for prompt ${prompt_id}`);
+      }
     } catch (countError) {
       // Log but don't fail the request if count update fails
       console.error("Failed to update call_count:", countError);
