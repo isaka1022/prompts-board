@@ -61,6 +61,14 @@ export default function Home() {
     }
   };
 
+  // Sort prompts by call_count (ranking)
+  const rankingPrompts = [...prompts].sort((a, b) => (b.call_count || 0) - (a.call_count || 0));
+
+  // Sort prompts by created_at (latest)
+  const latestPrompts = [...prompts].sort((a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
@@ -80,7 +88,7 @@ export default function Home() {
       <div className="container mx-auto px-4 py-12">
         <header className="mb-12 text-center">
           <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            Prompts Ranking
+            Prompts Board
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300">
             Browse and run your team's AI prompts
@@ -101,37 +109,83 @@ export default function Home() {
         )}
 
         {!loading && !error && (
-          <div className="space-y-4">
-            {prompts.map((prompt, index) => (
-              <Link
-                key={prompt.id}
-                href={`/prompt/${prompt.id}`}
-                className="block bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-6 border border-gray-200 dark:border-gray-700"
-              >
-                <div className="flex items-start gap-6">
-                  <div className="flex-shrink-0 text-center">
-                    <div className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">
-                      #{index + 1}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Latest Prompts Column */}
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                <span className="text-green-600 dark:text-green-400">🆕</span>
+                Latest Prompts
+              </h2>
+              <div className="space-y-4">
+                {latestPrompts.slice(0, 10).map((prompt, index) => (
+                  <Link
+                    key={prompt.id}
+                    href={`/prompt/${prompt.id}`}
+                    className="block bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-5 border border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 text-center min-w-[50px]">
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          #{index + 1}
+                        </div>
+                      </div>
+                      <div className="flex-grow">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                          {prompt.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">
+                          {prompt.body}
+                        </p>
+                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                          <span>By {prompt.author}</span>
+                          <span>{new Date(prompt.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                      {prompt.call_count || 0} calls
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Ranking Column */}
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                <span className="text-indigo-600 dark:text-indigo-400">🏆</span>
+                Most Called
+              </h2>
+              <div className="space-y-4">
+                {rankingPrompts.slice(0, 10).map((prompt, index) => (
+                  <Link
+                    key={prompt.id}
+                    href={`/prompt/${prompt.id}`}
+                    className="block bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-5 border border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 text-center min-w-[50px]">
+                        <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                          #{index + 1}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {prompt.call_count || 0} calls
+                        </div>
+                      </div>
+                      <div className="flex-grow">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                          {prompt.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">
+                          {prompt.body}
+                        </p>
+                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                          <span>By {prompt.author}</span>
+                          <span>{new Date(prompt.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex-grow">
-                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-                      {prompt.title}
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
-                      {prompt.body}
-                    </p>
-                    <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                      <span>By {prompt.author}</span>
-                      <span>{new Date(prompt.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
