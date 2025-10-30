@@ -11,13 +11,16 @@ import {
   needsReauth,
 } from "../lib/auth";
 import { supabase } from "../lib/supabase";
+import { AuthError, AuthErrorHandler, AuthErrorType } from "../lib/auth-errors";
+import { withAuthRetry } from "../lib/retry";
 
 export interface AuthState {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  error: string | null;
+  error: AuthError | null;
+  authState: 'unauthenticated' | 'authenticating' | 'authenticated' | 'error';
 }
 
 export interface AuthActions {
@@ -39,13 +42,33 @@ export function useAuth(): UseAuthReturn {
     isLoading: true,
     isAuthenticated: false,
     error: null,
+    authState: 'unauthenticated',
   });
 
   /**
-   * Update authentication state
+   * Update authentication state with validation
    */
   const updateAuthState = useCallback((updates: Partial<AuthState>) => {
-    setState((prev) => ({ ...prev, ...updates }));
+    setState((prev) => {
+      const newState = { ...prev, ...updates };
+      
+      // Validate state transition if authState is being updated
+      if (updates.authState && updates.authState !== prev.authState) {
+        const validation = AuthErrorHandler.validateStateTransition(
+          prev.authState,
+          updates.authState,
+          { userId: prev.user?.id }
+        );
+        
+        if (!validation.valid && validation.error) {
+          console.error("Invalid auth state transition:", validation.error.toJSON());
+          // Don't update to invalid state
+          return prev;
+        }
+      }
+      
+      return newState;
+    });
   }, []);
 
   /**
@@ -53,24 +76,50 @@ export function useAuth(): UseAuthReturn {
    */
   const initAuth = useCallback(async () => {
     try {
-      updateAuthState({ isLoading: true, error: null });
-      
-      const { user, session } = await initializeAuth();
-      
-      updateAuthState({
-        user,
-        session,
-        isAuthenticated: !!user && !!session,
-        isLoading: false,
+      updateAuthState({ 
+        isLoading: true, 
+        error: null, 
+        authState: 'authenticating' 
       });
+      
+      const result = await withAuthRetry(async () => {
+        return await initializeAuth();
+      });
+
+      if (result.success) {
+        const { user, session } = result.data!;
+        updateAuthState({
+          user,
+          session,
+          isAuthenticated: !!user && !!session,
+          isLoading: false,
+          authState: !!user && !!session ? 'authenticated' : 'unauthenticated',
+          error: null,
+        });
+      } else {
+        const authError = await AuthErrorHandler.handleError(result.error!, { operation: 'initAuth' });
+        updateAuthState({
+          user: null,
+          session: null,
+          isAuthenticated: false,
+          isLoading: false,
+          authState: 'error',
+          error: authError,
+        });
+      }
     } catch (error) {
-      console.error("Error initializing auth:", error);
+      const authError = await AuthErrorHandler.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: 'initAuth' }
+      );
+      
       updateAuthState({
         user: null,
         session: null,
         isAuthenticated: false,
         isLoading: false,
-        error: error instanceof Error ? error.message : "Failed to initialize authentication",
+        authState: 'error',
+        error: authError,
       });
     }
   }, [updateAuthState]);
@@ -93,9 +142,14 @@ export function useAuth(): UseAuthReturn {
       updateAuthState({ isLoading: false });
     } catch (error) {
       console.error("Error during login:", error);
+      const authError = await AuthErrorHandler.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: 'login' }
+      );
+      
       updateAuthState({
         isLoading: false,
-        error: error instanceof Error ? error.message : "Login failed",
+        error: authError,
       });
       
       await showToast({
@@ -111,7 +165,11 @@ export function useAuth(): UseAuthReturn {
    */
   const logout = useCallback(async () => {
     try {
-      updateAuthState({ isLoading: true, error: null });
+      updateAuthState({ 
+        isLoading: true, 
+        error: null, 
+        authState: 'authenticating' 
+      });
       
       await signOut();
       
@@ -120,6 +178,8 @@ export function useAuth(): UseAuthReturn {
         session: null,
         isAuthenticated: false,
         isLoading: false,
+        authState: 'unauthenticated',
+        error: null,
       });
       
       await showToast({
@@ -128,16 +188,19 @@ export function useAuth(): UseAuthReturn {
         message: "You have been successfully logged out",
       });
     } catch (error) {
-      console.error("Error during logout:", error);
-      updateAuthState({
-        isLoading: false,
-        error: error instanceof Error ? error.message : "Logout failed",
-      });
+      const authError = await AuthErrorHandler.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: 'logout' }
+      );
       
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Logout Failed",
-        message: error instanceof Error ? error.message : "An error occurred during logout",
+      // Even if logout fails, clear local state
+      updateAuthState({
+        user: null,
+        session: null,
+        isAuthenticated: false,
+        isLoading: false,
+        authState: 'unauthenticated',
+        error: authError,
       });
     }
   }, [updateAuthState]);
@@ -147,47 +210,78 @@ export function useAuth(): UseAuthReturn {
    */
   const refreshAuth = useCallback(async () => {
     try {
-      updateAuthState({ isLoading: true, error: null });
+      updateAuthState({ 
+        isLoading: true, 
+        error: null, 
+        authState: 'authenticating' 
+      });
       
-      // Check if we need to refresh the token
-      if (await needsReauth()) {
-        const session = await refreshAuthToken();
-        
-        if (session) {
-          updateAuthState({
-            user: session.user,
-            session,
-            isAuthenticated: true,
-            isLoading: false,
-          });
+      const result = await withAuthRetry(async () => {
+        // Check if we need to refresh the token
+        if (await needsReauth()) {
+          const session = await refreshAuthToken();
+          
+          if (session) {
+            return {
+              user: session.user,
+              session,
+              isAuthenticated: true,
+            };
+          } else {
+            throw new AuthError({
+              type: AuthErrorType.REFRESH_FAILED,
+              message: "Token refresh failed",
+              userMessage: "Failed to refresh your session. Please log in again.",
+              retryable: false,
+              requiresReauth: true,
+            });
+          }
         } else {
-          // Refresh failed, user needs to re-authenticate
-          updateAuthState({
-            user: null,
-            session: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
+          // Session is still valid, just validate it
+          const { isValid, session } = await validateSession();
+          
+          return {
+            user: isValid ? session?.user || null : null,
+            session: isValid ? session : null,
+            isAuthenticated: isValid,
+          };
         }
-      } else {
-        // Session is still valid, just validate it
-        const { isValid, session } = await validateSession();
-        
+      });
+
+      if (result.success) {
+        const { user, session, isAuthenticated } = result.data!;
         updateAuthState({
-          user: isValid ? session?.user || null : null,
-          session: isValid ? session : null,
-          isAuthenticated: isValid,
+          user,
+          session,
+          isAuthenticated,
           isLoading: false,
+          authState: isAuthenticated ? 'authenticated' : 'unauthenticated',
+          error: null,
+        });
+      } else {
+        const authError = await AuthErrorHandler.handleError(result.error!, { operation: 'refreshAuth' });
+        updateAuthState({
+          user: null,
+          session: null,
+          isAuthenticated: false,
+          isLoading: false,
+          authState: authError.requiresReauth ? 'unauthenticated' : 'error',
+          error: authError,
         });
       }
     } catch (error) {
-      console.error("Error refreshing auth:", error);
+      const authError = await AuthErrorHandler.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: 'refreshAuth' }
+      );
+      
       updateAuthState({
         user: null,
         session: null,
         isAuthenticated: false,
         isLoading: false,
-        error: error instanceof Error ? error.message : "Failed to refresh authentication",
+        authState: authError.requiresReauth ? 'unauthenticated' : 'error',
+        error: authError,
       });
     }
   }, [updateAuthState]);
@@ -208,11 +302,16 @@ export function useAuth(): UseAuthReturn {
       });
     } catch (error) {
       console.error("Error checking auth status:", error);
+      const authError = await AuthErrorHandler.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: 'checkAuthStatus' }
+      );
+      
       updateAuthState({
         user: null,
         session: null,
         isAuthenticated: false,
-        error: error instanceof Error ? error.message : "Failed to check authentication status",
+        error: authError,
       });
     }
   }, [updateAuthState]);

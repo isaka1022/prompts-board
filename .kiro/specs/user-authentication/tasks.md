@@ -59,29 +59,29 @@
     - Add user_id association for new prompts and history entries
     - _Requirements: 2.1, 2.4, 3.2_
 
-- [-] 5. Create login interface and update Raycast commands
+- [x] 5. Create login interface and update Raycast commands
   - [x] 5.1 Build login command component
     - Create src/login.tsx with Google OAuth authentication flow
     - Implement OAuth URL generation and callback processing
     - Add loading states and error messaging for auth failures
     - Update package.json to include login command
     - _Requirements: 1.1, 1.2, 1.5_
-  - [-] 5.2 Update existing commands with authentication
+  - [x] 5.2 Update existing commands with authentication
     - Modify src/add-prompt.tsx to check authentication status and use user context
     - Update src/search-prompt.tsx to show user-specific prompts and handle auth
     - Add authentication checks to src/run-prompt.tsx
     - Implement authentication guards and automatic login redirects
     - _Requirements: 2.1, 3.2, 4.3, 5.2, 5.3, 5.4_
 
-- [ ] 6. Add user profile and logout functionality
-  - [ ] 6.1 Create user profile display and logout
+- [x] 6. Add user profile and logout functionality
+  - [x] 6.1 Create user profile display and logout
     - Build user profile component showing name and team information
     - Add user avatar and basic profile information display
     - Implement logout functionality with session cleanup
     - Add logout action to user interface components
     - _Requirements: 1.5, 2.3, 4.1, 4.2, 4.4_
 
-- [ ] 7. Add comprehensive error handling and validation
+- [-] 7. Add comprehensive error handling and validation
   - Create error boundary components for authentication failures
   - Implement retry logic for network issues during auth
   - Add user-friendly error messages for OAuth failures

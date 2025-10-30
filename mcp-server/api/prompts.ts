@@ -12,30 +12,41 @@ export default async function handler(req: AuthenticatedRequest, res: VercelResp
     return res.status(200).end();
   }
 
-  // Apply authentication middleware
-  const authResult = await authMiddleware(req, res, { required: true });
-  if (!authResult.success) {
-    return; // Response already sent by middleware
-  }
-
-  const userId = req.userId!;
-  const authHeader = req.headers.authorization!;
-  const token = authHeader.substring(7);
-  const authenticatedClient = createAuthenticatedClient(token);
-
   try {
     if (req.method === "GET") {
-      // Fetch prompts accessible to the authenticated user
-      // This will use RLS policies to filter based on user's team membership
-      const { data, error } = await authenticatedClient
-        .from("prompts")
-        .select(`
-          *,
-          user_profiles!prompts_user_id_fkey (
-            display_name
-          )
-        `)
-        .order("created_at", { ascending: false });
+      // For GET requests, authentication is optional - return public prompts if not authenticated
+      const authResult = await authMiddleware(req, res, { required: false });
+
+      let data, error;
+
+      if (authResult.success && req.userId) {
+        // Authenticated user - fetch their accessible prompts
+        const authHeader = req.headers.authorization!;
+        const token = authHeader.substring(7);
+        const authenticatedClient = createAuthenticatedClient(token);
+
+        const result = await authenticatedClient
+          .from("prompts")
+          .select(`
+            *,
+            user_profiles!prompts_user_id_fkey (
+              display_name
+            )
+          `)
+          .order("created_at", { ascending: false });
+
+        data = result.data;
+        error = result.error;
+      } else {
+        // Unauthenticated user - fetch all prompts (temporary until is_public column is added)
+        const result = await supabase
+          .from("prompts")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) {
         throw error;
@@ -49,6 +60,16 @@ export default async function handler(req: AuthenticatedRequest, res: VercelResp
 
       return res.status(200).json(transformedData);
     } else if (req.method === "POST") {
+      // Apply authentication middleware for POST
+      const authResult = await authMiddleware(req, res, { required: true });
+      if (!authResult.success) {
+        return; // Response already sent by middleware
+      }
+
+      const userId = req.userId!;
+      const authHeader = req.headers.authorization!;
+      const token = authHeader.substring(7);
+      const authenticatedClient = createAuthenticatedClient(token);
       // Add new prompt associated with authenticated user
       const { title, body } = req.body;
 

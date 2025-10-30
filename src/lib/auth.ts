@@ -1,6 +1,8 @@
 import { Session, User } from "@supabase/supabase-js";
 import { LocalStorage } from "@raycast/api";
 import { supabase } from "./supabase";
+import { AuthError, AuthErrorType, AuthErrorHandler } from "./auth-errors";
+import { withAuthRetry, authCircuitBreaker } from "./retry";
 
 // Session storage keys
 const SESSION_KEY = "supabase.auth.token";
@@ -19,13 +21,28 @@ export async function getStoredSession(): Promise<Session | null> {
     // Check if session is expired
     if (session.expires_at && Date.now() / 1000 > session.expires_at) {
       await clearSession();
-      return null;
+      throw new AuthError({
+        type: AuthErrorType.TOKEN_EXPIRED,
+        message: "Session has expired",
+        userMessage: "Your session has expired. Please log in again.",
+        retryable: false,
+        requiresReauth: true,
+      });
     }
     
     return session;
   } catch (error) {
-    console.error("Error retrieving stored session:", error);
-    return null;
+    if (error instanceof AuthError) {
+      throw error;
+    }
+    
+    const authError = AuthError.fromError(
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: 'getStoredSession' }
+    );
+    
+    console.error("Error retrieving stored session:", authError.toJSON());
+    throw authError;
   }
 }
 
@@ -41,8 +58,13 @@ export async function storeSession(session: Session): Promise<void> {
       await LocalStorage.setItem(USER_KEY, JSON.stringify(session.user));
     }
   } catch (error) {
-    console.error("Error storing session:", error);
-    throw error;
+    const authError = AuthError.fromError(
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: 'storeSession', sessionId: session.user?.id }
+    );
+    
+    console.error("Error storing session:", authError.toJSON());
+    throw authError;
   }
 }
 
@@ -71,31 +93,72 @@ export async function isAuthenticated(): Promise<boolean> {
  */
 export async function validateSession(): Promise<{ isValid: boolean; session: Session | null }> {
   try {
-    const session = await getStoredSession();
-    
-    if (!session) {
-      return { isValid: false, session: null };
-    }
-    
-    // Check if session is expired
-    if (isSessionExpired(session)) {
+    const result = await withAuthRetry(async () => {
+      const session = await getStoredSession();
+      
+      if (!session) {
+        return { isValid: false, session: null };
+      }
+      
+      // Check if session is expired
+      if (isSessionExpired(session)) {
+        await clearSession();
+        throw new AuthError({
+          type: AuthErrorType.TOKEN_EXPIRED,
+          message: "Session has expired",
+          userMessage: "Your session has expired. Please log in again.",
+          retryable: false,
+          requiresReauth: true,
+        });
+      }
+      
+      // Verify session with Supabase using circuit breaker
+      return await authCircuitBreaker.execute(async () => {
+        await supabase.auth.setSession(session);
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error) {
+          throw new AuthError({
+            type: AuthErrorType.SESSION_INVALID,
+            message: error.message,
+            userMessage: "Your session is no longer valid. Please log in again.",
+            retryable: false,
+            requiresReauth: true,
+            originalError: error,
+          });
+        }
+        
+        if (!user) {
+          throw new AuthError({
+            type: AuthErrorType.INVALID_TOKEN,
+            message: "No user found for session",
+            userMessage: "Your session is invalid. Please log in again.",
+            retryable: false,
+            requiresReauth: true,
+          });
+        }
+        
+        return { isValid: true, session };
+      });
+    });
+
+    if (result.success) {
+      return result.data!;
+    } else {
+      await AuthErrorHandler.handleError(result.error!, { operation: 'validateSession' });
       await clearSession();
       return { isValid: false, session: null };
     }
-    
-    // Verify session with Supabase
-    await supabase.auth.setSession(session);
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
-    if (error || !user) {
-      await clearSession();
-      return { isValid: false, session: null };
-    }
-    
-    return { isValid: true, session };
   } catch (error) {
-    console.error("Error validating session:", error);
-    await clearSession();
+    const authError = await AuthErrorHandler.handleError(
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: 'validateSession' }
+    );
+    
+    if (authError.requiresReauth) {
+      await clearSession();
+    }
+    
     return { isValid: false, session: null };
   }
 }
@@ -156,17 +219,49 @@ export async function initializeAuth(): Promise<{ user: User | null; session: Se
  */
 export async function refreshAuthToken(): Promise<Session | null> {
   try {
-    const { data: { session }, error } = await supabase.auth.refreshSession();
-    
-    if (error || !session) {
+    const result = await withAuthRetry(async () => {
+      return await authCircuitBreaker.execute(async () => {
+        const { data: { session }, error } = await supabase.auth.refreshSession();
+        
+        if (error) {
+          throw new AuthError({
+            type: AuthErrorType.REFRESH_FAILED,
+            message: error.message,
+            userMessage: "Failed to refresh your session. Please log in again.",
+            retryable: false,
+            requiresReauth: true,
+            originalError: error,
+          });
+        }
+        
+        if (!session) {
+          throw new AuthError({
+            type: AuthErrorType.REFRESH_FAILED,
+            message: "No session returned from refresh",
+            userMessage: "Failed to refresh your session. Please log in again.",
+            retryable: false,
+            requiresReauth: true,
+          });
+        }
+        
+        await storeSession(session);
+        return session;
+      });
+    });
+
+    if (result.success) {
+      return result.data!;
+    } else {
+      await AuthErrorHandler.handleError(result.error!, { operation: 'refreshAuthToken' });
       await clearSession();
       return null;
     }
-    
-    await storeSession(session);
-    return session;
   } catch (error) {
-    console.error("Error refreshing auth token:", error);
+    const authError = await AuthErrorHandler.handleError(
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: 'refreshAuthToken' }
+    );
+    
     await clearSession();
     return null;
   }
@@ -177,11 +272,35 @@ export async function refreshAuthToken(): Promise<Session | null> {
  */
 export async function signOut(): Promise<void> {
   try {
-    await supabase.auth.signOut();
-    await clearSession();
+    const result = await withAuthRetry(async () => {
+      return await authCircuitBreaker.execute(async () => {
+        const { error } = await supabase.auth.signOut();
+        
+        if (error) {
+          throw new AuthError({
+            type: AuthErrorType.LOGOUT_FAILED,
+            message: error.message,
+            userMessage: "Logout failed, but your local session has been cleared.",
+            retryable: true,
+            requiresReauth: false,
+            originalError: error,
+          });
+        }
+      });
+    }, { maxAttempts: 2, showToasts: false });
+
+    if (!result.success) {
+      // Log the error but don't throw - we still want to clear local session
+      await AuthErrorHandler.handleError(result.error!, { operation: 'signOut' });
+    }
   } catch (error) {
-    console.error("Error signing out:", error);
-    // Clear session even if signOut fails
+    // Log the error but don't throw - we still want to clear local session
+    await AuthErrorHandler.handleError(
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: 'signOut' }
+    );
+  } finally {
+    // Always clear session even if signOut fails
     await clearSession();
   }
 }

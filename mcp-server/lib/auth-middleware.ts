@@ -28,7 +28,10 @@ export async function authMiddleware(
       if (options.required) {
         res.status(401).json({ 
           error: "Authentication required",
-          message: "Missing or invalid authorization header" 
+          message: "Missing or invalid authorization header",
+          code: "MISSING_AUTH_HEADER",
+          retryable: false,
+          requiresReauth: true
         });
         return { success: false };
       }
@@ -44,19 +47,28 @@ export async function authMiddleware(
       console.error("Token validation error:", error);
       
       if (options.required) {
-        // Check if it's a token expiry error
-        if (error.message?.includes("expired") || error.message?.includes("invalid")) {
-          res.status(401).json({ 
-            error: "Token expired or invalid",
-            message: "Please re-authenticate",
-            code: "TOKEN_EXPIRED"
-          });
-        } else {
-          res.status(401).json({ 
-            error: "Authentication failed",
-            message: error.message || "Invalid token"
-          });
+        // Categorize the error for better client handling
+        let errorCode = "AUTH_FAILED";
+        let retryable = false;
+        let requiresReauth = true;
+        
+        if (error.message?.includes("expired")) {
+          errorCode = "TOKEN_EXPIRED";
+        } else if (error.message?.includes("invalid") || error.message?.includes("malformed")) {
+          errorCode = "INVALID_TOKEN";
+        } else if (error.message?.includes("network") || error.message?.includes("timeout")) {
+          errorCode = "NETWORK_ERROR";
+          retryable = true;
+          requiresReauth = false;
         }
+        
+        res.status(401).json({ 
+          error: "Authentication failed",
+          message: error.message || "Invalid token",
+          code: errorCode,
+          retryable,
+          requiresReauth
+        });
         return { success: false };
       }
       return { success: true }; // Continue without auth for optional auth
@@ -66,7 +78,10 @@ export async function authMiddleware(
       if (options.required) {
         res.status(401).json({ 
           error: "Invalid token",
-          message: "No user found for provided token" 
+          message: "No user found for provided token",
+          code: "NO_USER_FOUND",
+          retryable: false,
+          requiresReauth: true
         });
         return { success: false };
       }
@@ -82,9 +97,20 @@ export async function authMiddleware(
     console.error("Auth middleware error:", error);
     
     if (options.required) {
+      // Determine if this is a retryable error
+      const isNetworkError = error instanceof Error && (
+        error.message.includes('network') ||
+        error.message.includes('timeout') ||
+        error.message.includes('fetch') ||
+        error.message.includes('connection')
+      );
+      
       res.status(500).json({
         error: "Authentication error",
-        message: error instanceof Error ? error.message : "Unknown authentication error"
+        message: error instanceof Error ? error.message : "Unknown authentication error",
+        code: isNetworkError ? "NETWORK_ERROR" : "INTERNAL_ERROR",
+        retryable: isNetworkError,
+        requiresReauth: !isNetworkError
       });
       return { success: false };
     }

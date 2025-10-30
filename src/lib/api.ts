@@ -1,9 +1,16 @@
-import { LocalStorage } from "@raycast/api";
+import { LocalStorage, getPreferenceValues } from "@raycast/api";
 import { Prompt, RunPromptRequest, RunPromptResponse } from "../types";
 import { getAuthHeaders } from "./auth";
 import fetch from "node-fetch";
 
-const MCP_BASE_URL = process.env.MCP_BASE_URL || "https://mcp-server-djn3dyov4-isaka1022s-projects.vercel.app";
+interface Preferences {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  mcpBaseUrl: string;
+}
+
+const preferences = getPreferenceValues<Preferences>();
+const MCP_BASE_URL = preferences.mcpBaseUrl;
 const USE_DEMO_MODE = false; // Production mode - using real Claude AI
 
 async function getApiKey(): Promise<string | undefined> {
@@ -88,14 +95,19 @@ export async function fetchPrompts(): Promise<Prompt[]> {
   }
 
   try {
+    const authHeaders = await getAuthHeaders();
     const response = await fetch(`${MCP_BASE_URL}/prompts`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        ...authHeaders,
       },
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Authentication required. Please log in first.");
+      }
       throw new Error(`Failed to fetch prompts: ${response.statusText}`);
     }
 
@@ -106,21 +118,26 @@ export async function fetchPrompts(): Promise<Prompt[]> {
   }
 }
 
-export async function addPrompt(title: string, body: string, author: string): Promise<Prompt> {
+export async function addPrompt(title: string, body: string, author?: string): Promise<Prompt> {
   if (USE_DEMO_MODE) {
-    return await addDemoPrompt(title, body, author);
+    return await addDemoPrompt(title, body, author || "Demo User");
   }
 
   try {
+    const authHeaders = await getAuthHeaders();
     const response = await fetch(`${MCP_BASE_URL}/prompts`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...authHeaders,
       },
       body: JSON.stringify({ title, body, author }),
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Authentication required. Please log in first.");
+      }
       throw new Error(`Failed to add prompt: ${response.statusText}`);
     }
 
@@ -138,17 +155,23 @@ export async function runPrompt(request: RunPromptRequest): Promise<RunPromptRes
   }
 
   try {
+    const authHeaders = await getAuthHeaders();
     const apiKey = await getApiKey();
+    
     const response = await fetch(`${MCP_BASE_URL}/run`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(apiKey && { Authorization: `Bearer ${apiKey}` }),
+        ...authHeaders,
+        ...(apiKey && { "X-API-Key": apiKey }),
       },
       body: JSON.stringify(request),
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Authentication required. Please log in first.");
+      }
       throw new Error(`Failed to run prompt: ${response.statusText}`);
     }
 

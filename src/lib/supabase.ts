@@ -1,12 +1,19 @@
 import { createClient, SupabaseClient, Session, User } from "@supabase/supabase-js";
-import { LocalStorage } from "@raycast/api";
+import { LocalStorage, getPreferenceValues } from "@raycast/api";
 
-// Environment variables for Supabase configuration
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://your-project.supabase.co";
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
+interface Preferences {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  mcpBaseUrl: string;
+}
+
+// Get Supabase configuration from Raycast preferences
+const preferences = getPreferenceValues<Preferences>();
+const SUPABASE_URL = preferences.supabaseUrl;
+const SUPABASE_ANON_KEY = preferences.supabaseAnonKey;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn("Supabase environment variables not configured. Authentication will not work.");
+  console.warn("Supabase preferences not configured. Authentication will not work.");
 }
 
 // Create Supabase client configured for Raycast environment

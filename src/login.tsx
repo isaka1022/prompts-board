@@ -1,10 +1,20 @@
-import { Action, ActionPanel, Detail, showToast, Toast, open, popToRoot } from "@raycast/api";
-import { useState, useEffect } from "react";
+import { Action, ActionPanel, Detail, showToast, Toast, open, popToRoot, getPreferenceValues } from "@raycast/api";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "./hooks/useAuth";
+import { AuthError, AuthErrorHandler, AuthErrorType } from "./lib/auth-errors";
+import { withAuthRetry } from "./lib/retry";
+import { AuthErrorBoundary } from "./components/AuthErrorBoundary";
 
-const MCP_BASE_URL = process.env.MCP_BASE_URL || "https://mcp-server-4mrd922n0-isaka1022s-projects.vercel.app";
+interface Preferences {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  mcpBaseUrl: string;
+}
 
-export default function Login() {
+const preferences = getPreferenceValues<Preferences>();
+const MCP_BASE_URL = preferences.mcpBaseUrl;
+
+function LoginComponent() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
   const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [isGeneratingUrl, setIsGeneratingUrl] = useState(false);
@@ -26,10 +36,16 @@ You are successfully authenticated and can now use all PromptBoard features.
         markdown={userInfo}
         actions={
           <ActionPanel>
+            <Action.OpenInBrowser
+              title="View Profile"
+              url="raycast://extensions/your-name/prompt-board/user-profile"
+              icon="👤"
+            />
             <Action
               title="Logout"
               onAction={logout}
               style={Action.Style.Destructive}
+              icon="🚪"
             />
             <Action
               title="Close"
@@ -48,29 +64,34 @@ You are successfully authenticated and can now use all PromptBoard features.
     setError(null);
 
     try {
-      const response = await fetch(`${MCP_BASE_URL}/auth/login`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const result = await withAuthRetry(async () => {
+        const response = await fetch(`${MCP_BASE_URL}/auth/login?redirectTo=${encodeURIComponent(`${MCP_BASE_URL}/auth/success`)}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to generate login URL: ${response.statusText}`);
+        }
+
+        const data = await response.json() as { url: string };
+        return data.url;
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to generate login URL: ${response.statusText}`);
+      if (result.success) {
+        setAuthUrl(result.data!);
+      } else {
+        const authError = await AuthErrorHandler.handleError(result.error!, { operation: 'generateAuthUrl' });
+        setError(authError.userMessage);
       }
-
-      const data = await response.json();
-      setAuthUrl(data.url);
     } catch (error) {
-      console.error("Error generating auth URL:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to generate login URL";
-      setError(errorMessage);
-      
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Login Error",
-        message: errorMessage,
-      });
+      const authError = await AuthErrorHandler.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: 'generateAuthUrl' }
+      );
+      setError(authError.userMessage);
     } finally {
       setIsGeneratingUrl(false);
     }
@@ -92,12 +113,17 @@ You are successfully authenticated and can now use all PromptBoard features.
         message: "Complete the login process in your browser, then return to Raycast",
       });
     } catch (error) {
-      console.error("Error opening auth URL:", error);
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to Open Browser",
-        message: "Could not open the login page. Please try again.",
+      const authError = new AuthError({
+        type: AuthErrorType.OAUTH_FAILED,
+        message: error instanceof Error ? error.message : "Failed to open browser",
+        userMessage: "Could not open the login page. Please try again.",
+        retryable: true,
+        requiresReauth: false,
+        originalError: error instanceof Error ? error : undefined,
       });
+      
+      await authError.showToast();
+      setError(authError.userMessage);
     }
   };
 
@@ -167,5 +193,22 @@ ${isGeneratingUrl ? '🔄 **Generating login URL...**' : ''}
         </ActionPanel>
       }
     />
+  );
+}
+
+// Wrap the component with error boundary
+export default function Login() {
+  return (
+    <AuthErrorBoundary
+      onAuthError={(error) => {
+        console.error("Login component auth error:", error);
+      }}
+      onRetry={() => {
+        // Refresh the page/component
+        window.location?.reload?.();
+      }}
+    >
+      <LoginComponent />
+    </AuthErrorBoundary>
   );
 }

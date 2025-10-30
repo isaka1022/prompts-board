@@ -10,11 +10,43 @@
     "Developer Tools"
   ],
   "license": "MIT",
+  "preferences": [
+    {
+      "name": "supabaseUrl",
+      "title": "Supabase URL",
+      "description": "Your Supabase project URL",
+      "type": "textfield",
+      "required": true,
+      "default": "https://ttdvuvlvnhefnuvnecvd.supabase.co"
+    },
+    {
+      "name": "supabaseAnonKey",
+      "title": "Supabase Anon Key",
+      "description": "Your Supabase anonymous key",
+      "type": "password",
+      "required": true,
+      "default": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0ZHZ1dmx2bmhlZm51dm5lY3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTMzNzksImV4cCI6MjA3NzM4OTM3OX0.LJ88Axy1XUQGaYhRa6ahHdJgXjiPoQr0EDugCrZ8POo"
+    },
+    {
+      "name": "mcpBaseUrl",
+      "title": "MCP Server URL",
+      "description": "The base URL for the MCP server",
+      "type": "textfield",
+      "required": true,
+      "default": "https://mcp-server-4mrd922n0-isaka1022s-projects.vercel.app"
+    }
+  ],
   "commands": [
     {
       "name": "login",
       "title": "Login",
       "description": "Login to PromptBoard with Google OAuth",
+      "mode": "view"
+    },
+    {
+      "name": "user-profile",
+      "title": "User Profile",
+      "description": "View your profile and logout from PromptBoard",
       "mode": "view"
     },
     {
@@ -39,6 +71,7 @@
   "devDependencies": {
     "@raycast/eslint-config": "^1.0.8",
     "@types/node": "^20.10.0",
+    "@types/node-fetch": "^2.6.13",
     "@types/react": "^18.2.45",
     "eslint": "^8.56.0",
     "prettier": "^3.1.1",
