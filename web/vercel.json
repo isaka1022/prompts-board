@@ -4,6 +4,6 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_MCP_BASE_URL": "https://mcp-server-djn3dyov4-isaka1022s-projects.vercel.app"
+    "NEXT_PUBLIC_MCP_BASE_URL": "https://mcp-server-6aad63cwa-isaka1022s-projects.vercel.app"
   }
 }
