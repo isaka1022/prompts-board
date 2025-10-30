@@ -1,16 +1,10 @@
-import { LocalStorage, getPreferenceValues } from "@raycast/api";
+import "cross-fetch/polyfill";
+import { LocalStorage } from "@raycast/api";
 import { Prompt, RunPromptRequest, RunPromptResponse } from "../types";
 import { getAuthHeaders } from "./auth";
-import fetch from "node-fetch";
+import { config } from "../config";
 
-interface Preferences {
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-  mcpBaseUrl: string;
-}
-
-const preferences = getPreferenceValues<Preferences>();
-const MCP_BASE_URL = preferences.mcpBaseUrl;
+const MCP_BASE_URL = config.mcpBaseUrl;
 const USE_DEMO_MODE = false; // Production mode - using real Claude AI
 
 async function getApiKey(): Promise<string | undefined> {

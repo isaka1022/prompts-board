@@ -392,15 +392,27 @@ export function useAuth(): UseAuthReturn {
    * Periodic authentication check
    */
   useEffect(() => {
-    if (!state.isAuthenticated) return;
+    if (state.isAuthenticated) {
+      // If authenticated, check for token refresh needs every 5 minutes
+      const interval = setInterval(async () => {
+        if (await needsReauth()) {
+          await refreshAuth();
+        }
+      }, 5 * 60 * 1000);
 
-    const interval = setInterval(async () => {
-      if (await needsReauth()) {
-        await refreshAuth();
-      }
-    }, 5 * 60 * 1000); // Check every 5 minutes
+      return () => clearInterval(interval);
+    } else {
+      // If not authenticated, check more frequently for new logins
+      const interval = setInterval(async () => {
+        const session = await getStoredSession();
+        if (session) {
+          // Found a session, refresh auth state
+          await refreshAuth();
+        }
+      }, 2000); // Check every 2 seconds
 
-    return () => clearInterval(interval);
+      return () => clearInterval(interval);
+    }
   }, [state.isAuthenticated, refreshAuth]);
 
   return {

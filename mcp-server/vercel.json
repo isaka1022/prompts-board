@@ -8,19 +8,34 @@
   ],
   "routes": [
     {
-      "src": "/prompts",
-      "methods": ["GET"],
-      "dest": "/api/prompts.ts"
+      "src": "/auth/(.*)",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "dest": "/api/auth.ts",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
     },
     {
       "src": "/prompts",
-      "methods": ["POST"],
-      "dest": "/api/prompts.ts"
+      "methods": ["GET", "POST", "OPTIONS"],
+      "dest": "/api/prompts.ts",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
     },
     {
       "src": "/run",
-      "methods": ["POST"],
-      "dest": "/api/run.ts"
+      "methods": ["POST", "OPTIONS"],
+      "dest": "/api/run.ts",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
     }
   ]
 }

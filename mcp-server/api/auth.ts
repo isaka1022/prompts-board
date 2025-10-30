@@ -49,10 +49,15 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
     const { platform } = req.query;
     const isRaycast = platform === 'raycast';
     
+    // Get base URL with proper scheme
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'https://mcp-server-7armcb1wq-isaka1022s-projects.vercel.app';
+    
     // Choose redirect URL based on platform
     const redirectTo = isRaycast 
-      ? `${process.env.VERCEL_URL || 'https://mcp-server-4mrd922n0-isaka1022s-projects.vercel.app'}/auth/raycast-callback`
-      : `${process.env.VERCEL_URL || 'https://mcp-server-4mrd922n0-isaka1022s-projects.vercel.app'}/auth/success`;
+      ? `${baseUrl}/auth/raycast-callback`
+      : `${baseUrl}/auth/success`;
     
     // Generate Google OAuth URL
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -340,6 +345,405 @@ async function handleAuthSuccess(req: VercelRequest, res: VercelResponse) {
             <p><strong>Error:</strong> ${error instanceof Error ? error.message : 'Unknown error'}</p>
             <p>Please try logging in again.</p>
           </div>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+}
+
+async function handleRaycastCallback(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    const { code, error: authError } = req.query;
+
+    if (authError) {
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentication Error - PromptBoard</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              margin: 0; 
+              padding: 40px;
+              background: #f6f8fa;
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .container { 
+              max-width: 500px; 
+              background: white; 
+              padding: 40px; 
+              border-radius: 12px; 
+              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+              text-align: center;
+            }
+            .error { 
+              color: #d73a49; 
+              background: #ffeef0; 
+              padding: 20px; 
+              border-radius: 8px; 
+              margin: 20px 0;
+            }
+            .icon { font-size: 48px; margin-bottom: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">❌</div>
+            <h1>認証エラー</h1>
+            <div class="error">
+              <p><strong>エラー:</strong> ${authError}</p>
+              <p>もう一度ログインをお試しください。</p>
+            </div>
+            <p><small>このページを閉じて、Raycastに戻ってください。</small></p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    if (!code) {
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentication Error - PromptBoard</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              margin: 0; 
+              padding: 40px;
+              background: #f6f8fa;
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .container { 
+              max-width: 500px; 
+              background: white; 
+              padding: 40px; 
+              border-radius: 12px; 
+              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+              text-align: center;
+            }
+            .error { 
+              color: #d73a49; 
+              background: #ffeef0; 
+              padding: 20px; 
+              border-radius: 8px; 
+              margin: 20px 0;
+            }
+            .icon { font-size: 48px; margin-bottom: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">❌</div>
+            <h1>認証エラー</h1>
+            <div class="error">
+              <p>認証コードが見つかりません。もう一度ログインをお試しください。</p>
+            </div>
+            <p><small>このページを閉じて、Raycastに戻ってください。</small></p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    // Exchange code for session
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code as string);
+
+    if (error || !data.session) {
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentication Error - PromptBoard</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              margin: 0; 
+              padding: 40px;
+              background: #f6f8fa;
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .container { 
+              max-width: 500px; 
+              background: white; 
+              padding: 40px; 
+              border-radius: 12px; 
+              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+              text-align: center;
+            }
+            .error { 
+              color: #d73a49; 
+              background: #ffeef0; 
+              padding: 20px; 
+              border-radius: 8px; 
+              margin: 20px 0;
+            }
+            .icon { font-size: 48px; margin-bottom: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">❌</div>
+            <h1>認証エラー</h1>
+            <div class="error">
+              <p><strong>エラー:</strong> ${error?.message || 'セッションの作成に失敗しました'}</p>
+              <p>もう一度ログインをお試しください。</p>
+            </div>
+            <p><small>このページを閉じて、Raycastに戻ってください。</small></p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    const { session, user } = data;
+
+    // Create or update user profile
+    if (supabaseAdmin) {
+      const { error: profileError } = await supabaseAdmin
+        .from("user_profiles")
+        .upsert({
+          id: user.id,
+          display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown User',
+          avatar_url: user.user_metadata?.avatar_url,
+          updated_at: new Date().toISOString()
+        });
+
+      if (profileError) {
+        console.error("Failed to create/update user profile:", profileError);
+      }
+    }
+
+    // Return success page that automatically closes and notifies Raycast
+    return res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>ログイン成功 - PromptBoard</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+          }
+          .container { 
+            max-width: 500px; 
+            background: rgba(255, 255, 255, 0.95); 
+            padding: 40px; 
+            border-radius: 20px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            text-align: center;
+            color: #333;
+            backdrop-filter: blur(10px);
+          }
+          .success { 
+            color: #28a745; 
+            background: #d4edda; 
+            padding: 20px; 
+            border-radius: 12px; 
+            margin: 20px 0;
+            border: 1px solid #c3e6cb;
+          }
+          .user-info {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+          }
+          .icon { 
+            font-size: 64px; 
+            margin-bottom: 20px; 
+            animation: bounce 2s infinite;
+          }
+          .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+          }
+          .countdown {
+            font-size: 18px;
+            font-weight: bold;
+            color: #666;
+            margin: 20px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="icon">🎉</div>
+          <h1>ログイン成功！</h1>
+          
+          <div class="success">
+            <p><strong>PromptBoardへようこそ！</strong><br>認証が完了しました。</p>
+          </div>
+
+          <div class="user-info">
+            <p><strong>ログイン済み:</strong> ${user.user_metadata?.full_name || user.email}</p>
+            <p><strong>メール:</strong> ${user.email}</p>
+          </div>
+
+          <div class="countdown">
+            <div class="loading"></div>
+            <span id="countdown">3</span>秒後にこのページを閉じます...
+          </div>
+
+          <p><small>Raycastに戻って、PromptBoardをお楽しみください！</small></p>
+        </div>
+
+        <script>
+          // Store session data in a way that Raycast can access it
+          const sessionData = ${JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            expires_at: session.expires_at,
+            user: {
+              id: user.id,
+              email: user.email,
+              user_metadata: {
+                full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown User',
+                avatar_url: user.user_metadata?.avatar_url
+              }
+            }
+          })};
+
+          // Try to communicate with Raycast extension
+          try {
+            // Use postMessage to communicate with parent window (if in iframe)
+            if (window.parent !== window) {
+              window.parent.postMessage({
+                type: 'PROMPTBOARD_AUTH_SUCCESS',
+                session: sessionData
+              }, '*');
+            }
+
+            // Also try to use custom URL scheme
+            const raycastUrl = 'raycast://extensions/promptboard/auth-success?' + 
+              encodeURIComponent(JSON.stringify(sessionData));
+            
+            // Try to redirect to Raycast
+            setTimeout(() => {
+              window.location.href = raycastUrl;
+            }, 1000);
+          } catch (error) {
+            console.log('Could not communicate with Raycast:', error);
+          }
+
+          // Countdown and auto-close
+          let countdown = 3;
+          const countdownElement = document.getElementById('countdown');
+          
+          const timer = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            
+            if (countdown <= 0) {
+              clearInterval(timer);
+              window.close();
+            }
+          }, 1000);
+
+          // Store in localStorage as fallback
+          try {
+            localStorage.setItem('promptboard_session', JSON.stringify(sessionData));
+          } catch (error) {
+            console.log('Could not store in localStorage:', error);
+          }
+        </script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error("Raycast callback error:", error);
+    return res.status(500).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Authentication Error - PromptBoard</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding: 40px;
+            background: #f6f8fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .container { 
+            max-width: 500px; 
+            background: white; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+          }
+          .error { 
+            color: #d73a49; 
+            background: #ffeef0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 20px 0;
+          }
+          .icon { font-size: 48px; margin-bottom: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="icon">❌</div>
+          <h1>認証エラー</h1>
+          <div class="error">
+            <p><strong>エラー:</strong> ${error instanceof Error ? error.message : '不明なエラー'}</p>
+            <p>もう一度ログインをお試しください。</p>
+          </div>
+          <p><small>このページを閉じて、Raycastに戻ってください。</small></p>
         </div>
       </body>
       </html>

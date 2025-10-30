@@ -21,11 +21,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      fetchPrompts();
-    } else {
-      setLoading(false);
-    }
+    // Fetch prompts whether user is logged in or not
+    fetchPrompts();
   }, [user]);
 
   const fetchPrompts = async () => {
@@ -34,22 +31,29 @@ export default function Home() {
         "Content-Type": "application/json",
       };
 
-      // Add auth token if user is signed in
-      if (user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          headers["Authorization"] = `Bearer ${session.access_token}`;
-        }
-      }
+      // Don't add auth token for now - keep it simple
+      // Authentication can be added later when properly configured
+
+      console.log("Fetching prompts from:", process.env.NEXT_PUBLIC_MCP_BASE_URL);
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_MCP_BASE_URL}/prompts`, {
         headers,
+        mode: 'cors',
       });
 
-      if (!response.ok) throw new Error("Failed to fetch prompts");
+      console.log("Response status:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        throw new Error(`Failed to fetch prompts: ${response.status} - ${errorText}`);
+      }
+
       const data = await response.json();
+      console.log("Fetched prompts:", data.length);
       setPrompts(data);
     } catch (err) {
+      console.error("Fetch error:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
@@ -67,26 +71,7 @@ export default function Home() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <Header />
-        <div className="container mx-auto px-4 py-12 flex items-center justify-center min-h-[80vh]">
-          <div className="text-center max-w-2xl">
-            <h1 className="text-6xl font-bold text-gray-900 dark:text-white mb-6">
-              🧠 PromptBoard
-            </h1>
-            <p className="text-2xl text-gray-600 dark:text-gray-300 mb-8">
-              Share, reuse, and run AI prompts seamlessly with your team
-            </p>
-            <p className="text-lg text-gray-500 dark:text-gray-400 mb-8">
-              Please sign in to access your prompts and start using PromptBoard.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Show prompts list even without login (removed login gate)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">

@@ -1,19 +1,14 @@
+import "cross-fetch/polyfill";
 import { createClient, SupabaseClient, Session, User } from "@supabase/supabase-js";
-import { LocalStorage, getPreferenceValues } from "@raycast/api";
+import { LocalStorage } from "@raycast/api";
+import { config } from "../config";
 
-interface Preferences {
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-  mcpBaseUrl: string;
-}
-
-// Get Supabase configuration from Raycast preferences
-const preferences = getPreferenceValues<Preferences>();
-const SUPABASE_URL = preferences.supabaseUrl;
-const SUPABASE_ANON_KEY = preferences.supabaseAnonKey;
+// Get Supabase configuration from environment variables
+const SUPABASE_URL = config.supabaseUrl;
+const SUPABASE_ANON_KEY = config.supabaseAnonKey;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn("Supabase preferences not configured. Authentication will not work.");
+  console.warn("Supabase configuration not found. Authentication will not work.");
 }
 
 // Create Supabase client configured for Raycast environment
