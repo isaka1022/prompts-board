@@ -41,6 +41,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Generate completion using Claude
     const output = await generateCompletion(prompt.body, input);
 
+    // Increment call_count for the prompt
+    try {
+      await supabase
+        .from("prompts")
+        .update({ call_count: (prompt.call_count || 0) + 1 })
+        .eq("id", prompt_id);
+    } catch (countError) {
+      // Log but don't fail the request if count update fails
+      console.error("Failed to update call_count:", countError);
+    }
+
     // Save to history (optional) - no user_id since we removed authentication
     try {
       await supabase.from("history").insert([

@@ -13,10 +13,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === "GET") {
-      // Fetch all prompts - no authentication required
+      // Fetch all prompts sorted by call_count (ranking) - no authentication required
       const { data, error } = await supabase
         .from("prompts")
         .select("*")
+        .order("call_count", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (error) {
