@@ -3,7 +3,7 @@ import { fetch } from "@raycast/utils";
 import { Prompt, RunPromptRequest, RunPromptResponse } from "../types";
 
 const MCP_BASE_URL = process.env.MCP_BASE_URL || "https://mcp-server-jlb50mbw9-isaka1022s-projects.vercel.app";
-const USE_DEMO_MODE = false; // Set to true to use demo mode with LocalStorage
+const USE_DEMO_MODE = true; // Set to false once Vercel deployment protection is disabled
 
 async function getApiKey(): Promise<string | undefined> {
   return await LocalStorage.getItem<string>("apiKey");
