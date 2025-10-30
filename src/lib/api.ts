@@ -1,9 +1,9 @@
 import { LocalStorage } from "@raycast/api";
-import { fetch } from "@raycast/utils";
 import { Prompt, RunPromptRequest, RunPromptResponse } from "../types";
+import fetch from "node-fetch";
 
 const MCP_BASE_URL = process.env.MCP_BASE_URL || "https://mcp-server-jlb50mbw9-isaka1022s-projects.vercel.app";
-const USE_DEMO_MODE = true; // Set to false once Vercel deployment protection is disabled
+const USE_DEMO_MODE = false; // Production mode - using real Claude AI
 
 async function getApiKey(): Promise<string | undefined> {
   return await LocalStorage.getItem<string>("apiKey");
