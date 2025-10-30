@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/prompts",
+      "methods": ["GET"],
+      "dest": "/api/prompts.ts"
+    },
+    {
+      "src": "/prompts",
+      "methods": ["POST"],
+      "dest": "/api/prompts.ts"
+    },
+    {
+      "src": "/run",
+      "methods": ["POST"],
+      "dest": "/api/run.ts"
+    }
+  ]
+}

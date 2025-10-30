@@ -1,0 +1,46 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "prompt-board",
+  "title": "PromptBoard",
+  "description": "Share, reuse, and run AI prompts seamlessly with your team",
+  "icon": "🧠",
+  "author": "your-name",
+  "categories": [
+    "Productivity",
+    "Developer Tools"
+  ],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "add-prompt",
+      "title": "Add Prompt",
+      "description": "Add a new prompt to PromptBoard",
+      "mode": "view"
+    },
+    {
+      "name": "search-prompt",
+      "title": "Search Prompts",
+      "description": "Search and run prompts from PromptBoard",
+      "mode": "view"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.64.0",
+    "@raycast/utils": "^1.10.0",
+    "@supabase/supabase-js": "^2.77.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.8",
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint"
+  }
+}
