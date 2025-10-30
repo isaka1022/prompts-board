@@ -12,6 +12,7 @@ interface Prompt {
   body: string;
   author: string;
   created_at: string;
+  call_count: number;
 }
 
 export default function Home() {
@@ -100,22 +101,34 @@ export default function Home() {
         )}
 
         {!loading && !error && (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {prompts.map((prompt) => (
+          <div className="space-y-4">
+            {prompts.map((prompt, index) => (
               <Link
                 key={prompt.id}
                 href={`/prompt/${prompt.id}`}
                 className="block bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-6 border border-gray-200 dark:border-gray-700"
               >
-                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-3">
-                  {prompt.title}
-                </h2>
-                <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
-                  {prompt.body}
-                </p>
-                <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                  <span>By {prompt.author}</span>
-                  <span>{new Date(prompt.created_at).toLocaleDateString()}</span>
+                <div className="flex items-start gap-6">
+                  <div className="flex-shrink-0 text-center">
+                    <div className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">
+                      #{index + 1}
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                      {prompt.call_count || 0} calls
+                    </div>
+                  </div>
+                  <div className="flex-grow">
+                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+                      {prompt.title}
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
+                      {prompt.body}
+                    </p>
+                    <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                      <span>By {prompt.author}</span>
+                      <span>{new Date(prompt.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
                 </div>
               </Link>
             ))}
