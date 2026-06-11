@@ -81,7 +81,7 @@ npm run dev
 
 ### Raycast拡張（`.env`）
 ```bash
-SUPABASE_URL=https://ttdvuvlvnhefnuvnecvd.supabase.co
+SUPABASE_URL=https://<your-project-ref>.supabase.co
 SUPABASE_ANON_KEY=eyJhbGc...（長いキー）
 MCP_BASE_URL=https://mcp-server-46087vffx-isaka1022s-projects.vercel.app
 ```
@@ -89,7 +89,7 @@ MCP_BASE_URL=https://mcp-server-46087vffx-isaka1022s-projects.vercel.app
 ### Web UI（`web/.env.local`）
 ```bash
 NEXT_PUBLIC_MCP_BASE_URL=https://mcp-server-46087vffx-isaka1022s-projects.vercel.app
-NEXT_PUBLIC_SUPABASE_URL=https://ttdvuvlvnhefnuvnecvd.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...（長いキー）
 ```
 

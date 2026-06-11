@@ -8,8 +8,8 @@
 const { createClient } = require("@supabase/supabase-js");
 const fs = require("fs");
 
-const SUPABASE_URL = "https://ttdvuvlvnhefnuvnecvd.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0ZHZ1dmx2bmhlZm51dm5lY3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTMzNzksImV4cCI6MjA3NzM4OTM3OX0.LJ88Axy1XUQGaYhRa6ahHdJgXjiPoQr0EDugCrZ8POo";
+const SUPABASE_URL = "https://<your-project-ref>.supabase.co";
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -20,7 +20,7 @@ async function setupDatabase() {
   // because the anon key doesn't have permission to execute DDL commands
 
   console.log("📋 Instructions:");
-  console.log("1. Go to: https://supabase.com/dashboard/project/ttdvuvlvnhefnuvnecvd/sql/new");
+  console.log("1. Go to: https://supabase.com/dashboard/project/<your-project-ref>/sql/new");
   console.log("2. Copy the contents of supabase/schema.sql");
   console.log("3. Paste and run it in the SQL Editor");
   console.log("\n✅ After running the schema, this script will verify the setup.\n");

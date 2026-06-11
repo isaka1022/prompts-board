@@ -27,7 +27,7 @@
    - Name: `PromptBoard`
    - **Authorized redirect URIs** に以下を追加：
      ```
-     https://ttdvuvlvnhefnuvnecvd.supabase.co/auth/v1/callback
+     https://<your-project-ref>.supabase.co/auth/v1/callback
      ```
    - **CREATE** をクリック
 
@@ -69,12 +69,12 @@ https://mcp-server-46087vffx-isaka1022s-projects.vercel.app
 
 ### Supabase Project
 ```
-https://ttdvuvlvnhefnuvnecvd.supabase.co
+https://<your-project-ref>.supabase.co
 ```
 
 ### Google OAuth Redirect URI（必須）
 ```
-https://ttdvuvlvnhefnuvnecvd.supabase.co/auth/v1/callback
+https://<your-project-ref>.supabase.co/auth/v1/callback
 ```
 
 この値を必ずGoogle Cloud Consoleに設定してください。
@@ -85,7 +85,7 @@ https://ttdvuvlvnhefnuvnecvd.supabase.co/auth/v1/callback
 
 ### `redirect_uri_mismatch`
 → Google Cloud Consoleの Redirect URI が間違っています
-→ 必ず `https://ttdvuvlvnhefnuvnecvd.supabase.co/auth/v1/callback` を設定
+→ 必ず `https://<your-project-ref>.supabase.co/auth/v1/callback` を設定
 
 ### `At least one Client ID is required`
 → Supabaseで Client ID / Secret を入力し忘れています

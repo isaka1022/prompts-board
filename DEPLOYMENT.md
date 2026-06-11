@@ -39,7 +39,7 @@ The extension is now connected to your production MCP server!
 
 You still need to create the database tables in Supabase:
 
-1. Go to: https://supabase.com/dashboard/project/ttdvuvlvnhefnuvnecvd/sql/new
+1. Go to: https://supabase.com/dashboard/project/<your-project-ref>/sql/new
 2. Copy and paste the SQL from `supabase/schema.sql`
 3. Run it in the SQL Editor
 

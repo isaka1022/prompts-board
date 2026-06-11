@@ -35,7 +35,7 @@ prompt-board/
 ### 本番環境
 - **Webアプリ**: https://web-klx6hj321-isaka1022s-projects.vercel.app
 - **MCPサーバー**: https://mcp-server-4ks2aigah-isaka1022s-projects.vercel.app
-- **Supabase**: https://ttdvuvlvnhefnuvnecvd.supabase.co
+- **Supabase**: https://<your-project-ref>.supabase.co
 
 ### ローカル環境
 - **Webアプリ**: http://localhost:3000
@@ -111,7 +111,7 @@ curl -X POST https://mcp-server-4ks2aigah-isaka1022s-projects.vercel.app/run \
 ### Google OAuth設定手順（未完了）
 1. Google Cloud Console でOAuth 2.0クライアントID作成
 2. Authorized redirect URIs設定:
-   - `https://ttdvuvlvnhefnuvnecvd.supabase.co/auth/v1/callback`
+   - `https://<your-project-ref>.supabase.co/auth/v1/callback`
    - `http://localhost:3000/auth/callback`
 3. SupabaseダッシュボードでClient ID/Secret設定
 
@@ -135,7 +135,7 @@ curl -X POST https://mcp-server-4ks2aigah-isaka1022s-projects.vercel.app/run \
 
 ### MCPサーバー (.env)
 ```
-SUPABASE_URL=https://ttdvuvlvnhefnuvnecvd.supabase.co
+SUPABASE_URL=https://<your-project-ref>.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOi...
 ANTHROPIC_API_KEY=sk-ant-api03-...
 ```
@@ -143,7 +143,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-...
 ### Webアプリ (.env.local)
 ```
 NEXT_PUBLIC_MCP_BASE_URL=https://mcp-server-4ks2aigah-isaka1022s-projects.vercel.app
-NEXT_PUBLIC_SUPABASE_URL=https://ttdvuvlvnhefnuvnecvd.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
 ```
 

@@ -48,10 +48,10 @@
 5. **Authorized redirect URIs** の **+ ADD URI** をクリックし、以下を追加：
 
 ```
-https://ttdvuvlvnhefnuvnecvd.supabase.co/auth/v1/callback
+https://<your-project-ref>.supabase.co/auth/v1/callback
 ```
 
-⚠️ **重要:** `ttdvuvlvnhefnuvnecvd` の部分は、あなたの Supabase プロジェクトIDに置き換えてください
+⚠️ **重要:** `<your-project-ref>` の部分は、あなたの Supabase プロジェクトIDに置き換えてください
 
 6. **CREATE** をクリック
 7. 表示される **Client ID** と **Client Secret** を **コピーして保存**
@@ -68,7 +68,7 @@ https://ttdvuvlvnhefnuvnecvd.supabase.co/auth/v1/callback
 ### 2-1. Google Provider の有効化
 
 1. [Supabase Dashboard](https://supabase.com/dashboard) を開く
-2. プロジェクト（`ttdvuvlvnhefnuvnecvd`）を選択
+2. プロジェクト（`<your-project-ref>`）を選択
 3. 左メニューから **Authentication** → **Providers** を選択
 4. **Google** を見つけてクリック
 5. 以下を入力：
@@ -87,7 +87,7 @@ https://ttdvuvlvnhefnuvnecvd.supabase.co/auth/v1/callback
 2. 以下のURLが表示されているはずです：
 
 ```
-https://ttdvuvlvnhefnuvnecvd.supabase.co/auth/v1/callback
+https://<your-project-ref>.supabase.co/auth/v1/callback
 ```
 
 これがGoogle Cloud Consoleで設定した値と一致していることを確認してください。
@@ -126,7 +126,7 @@ npm run dev
 1. Google Cloud Console → Credentials → 作成したOAuth Clientを開く
 2. **Authorized redirect URIs** に以下が含まれているか確認：
    ```
-   https://ttdvuvlvnhefnuvnecvd.supabase.co/auth/v1/callback
+   https://<your-project-ref>.supabase.co/auth/v1/callback
    ```
 3. なければ追加して **Save**
 
