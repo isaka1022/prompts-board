@@ -179,6 +179,28 @@ Tests (vitest):
 npm test
 ```
 
+## Roadmap
+
+### Now
+- Local file / SQLite fallback mode — Supabase-free operation using the existing `USE_DEMO_MODE` stub
+- Consolidate the 13 scattered setup docs into a single English README with a "Deploy to Vercel" button
+- Formalise the no-auth mode so teams can self-host without Google OAuth
+- Add edit and delete actions for prompts in the Raycast extension
+
+### Next
+- Tag / category filters for the prompt library
+- Publish to **Raycast Store** (512×512 icon, CHANGELOG, English README — requirements already confirmed)
+- Prompt version history table in Supabase
+- Complete the web dashboard (`web/`)
+- Public / private toggle surfaced as a Raycast action
+
+### Later
+- Team invitation flow with email-domain auto-assignment
+- Streaming output display in Raycast during LLM execution
+- Multi-LLM backend support (OpenAI, Gemini, local models)
+- CI/CD pipeline via GitHub Actions + `vercel --archive=tgz`
+- **API authentication** — require an API key header on MCP server endpoints (currently unauthenticated with `CORS *`)
+
 ## License
 
 MIT — see [LICENSE](LICENSE)
