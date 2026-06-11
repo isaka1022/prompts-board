@@ -6,7 +6,7 @@ Your Supabase credentials are already configured! Follow these steps to complete
 
 Go to your Supabase SQL Editor and run the schema:
 
-**URL:** https://supabase.com/dashboard/project/ttdvuvlvnhefnuvnecvd/sql/new
+**URL:** https://supabase.com/dashboard/project/<your-project-ref>/sql/new
 
 **Copy and paste this SQL:**
 

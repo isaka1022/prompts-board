@@ -13,7 +13,7 @@ export const anthropic = new Anthropic({
 export async function generateCompletion(prompt: string, input: string): Promise<string> {
   try {
     const message = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
+      model: process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5",
       max_tokens: 4096,
       temperature: 0.7,
       system: prompt,

@@ -17,9 +17,9 @@ cp .env.example .env
 
 ```bash
 # .env
-SUPABASE_URL=https://ttdvuvlvnhefnuvnecvd.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0ZHZ1dmx2bmhlZm51dm5lY3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTMzNzksImV4cCI6MjA3NzM4OTM3OX0.LJ88Axy1XUQGaYhRa6ahHdJgXjiPoQr0EDugCrZ8POo
-MCP_BASE_URL=https://mcp-server-4mrd922n0-isaka1022s-projects.vercel.app
+SUPABASE_URL=https://<your-project-ref>.supabase.co
+SUPABASE_ANON_KEY=<your-anon-key>
+MCP_BASE_URL=<your-mcp-server-url>
 ```
 
 ### 2. 値の取得方法

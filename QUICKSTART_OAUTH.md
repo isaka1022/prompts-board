@@ -21,7 +21,7 @@
    - Name: `PromptBoard`
    - Authorized redirect URIs: **以下を追加**
      ```
-     https://ttdvuvlvnhefnuvnecvd.supabase.co/auth/v1/callback
+     https://<your-project-ref>.supabase.co/auth/v1/callback
      ```
    - **CREATE**
 5. 表示される **Client ID** と **Client Secret** をコピー ✅
@@ -59,8 +59,8 @@ npm run dev
 
 Supabase Dashboard → **Settings** > **General** で確認できます。
 
-例: `https://ttdvuvlvnhefnuvnecvd.supabase.co`
-→ Project ID = `ttdvuvlvnhefnuvnecvd`
+例: `https://<your-project-ref>.supabase.co`
+→ Project ID = `<your-project-ref>`
 
 Redirect URIは以下の形式になります：
 ```
